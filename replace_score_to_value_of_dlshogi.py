@@ -12,11 +12,11 @@ from tqdm import tqdm
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Replace score in psv file with Value in dlshogi.")
-    parser.add_argument("input_file", type=str, help="input file (.bin)")
-    parser.add_argument("output_file", type=str, help="output file (.bin)")
+    parser.add_argument("input_file", type=str, help="Input file (.bin)")
+    parser.add_argument("output_file", type=str, help="Output file (.bin)")
     parser.add_argument("--model-path", type=str, default="model.onnx", help="ONNX Model path", dest="model_path")
-    parser.add_argument("--score-scaling", type=float, default=600.0, help="score scaling", dest="score_scaling")
-    parser.add_argument("--batch-size", type=int, default=16384, help="batch size", dest="batch_size")
+    parser.add_argument("--score-scaling", type=float, default=600.0, help="Score scaling", dest="score_scaling")
+    parser.add_argument("--batch-size", type=int, default=16384, help="Batch size", dest="batch_size")
     parser.add_argument("--device-id", type=int, default=0, help="Device ID to be used", dest="device_id")
     parser.add_argument("--enable-cuda", action="store_true", help="Enable CUDAExecutionProvider", dest="enable_cuda")
     parser.add_argument("--enable-tensorrt", action="store_true", help="Enable TensorrtExecutionProvider", dest="enable_tensorrt")
