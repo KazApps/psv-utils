@@ -9,11 +9,12 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Shuffle data in psv file.")
     parser.add_argument("input_file", type=str, help="Input file (.bin)")
     parser.add_argument("output_file", type=str,
-                        help="Output file (.bin). If an empty string is given, the input file will be shuffled in-place.")
-    parser.add_argument("--chunk-size", type=int, default=10**6, help="Chunk size", dest="chunk_size")
+                        help="Output file (.bin). If an empty string is given, the input file will be shuffled in-place")
+    parser.add_argument("--chunk-size", type=int, default=10**7, help="Chunk size", dest="chunk_size")
+
     return parser.parse_args()
 
-def shuffle_large_file(input_path, output_path, chunk_size=10**6, dtype=PackedSfenValue):
+def shuffle_large_file(input_path, output_path, chunk_size=10**7, dtype=PackedSfenValue):
     input_mmap = np.memmap(input_path, dtype=dtype, mode='r')
     total = len(input_mmap)
     num_chunks = int(np.ceil(total / chunk_size))
@@ -37,7 +38,7 @@ def shuffle_large_file(input_path, output_path, chunk_size=10**6, dtype=PackedSf
     assert output_pos == total, "Output data size does not match input data size"
     output_mmap.flush()
 
-def shuffle_large_file_inplace(input_path, chunk_size=10**6, dtype=PackedSfenValue):
+def shuffle_large_file_inplace(input_path, chunk_size=10**7, dtype=PackedSfenValue):
     mmap = np.memmap(input_path, dtype=dtype, mode="r+")
     total = len(mmap)
     num_chunks = int(np.ceil(total / chunk_size))
@@ -75,6 +76,9 @@ def main():
 
     if not args.input_file.endswith(".bin"):
         raise ValueError("Input file must be a PackedSfenValue file (.bin).")
+
+    if os.path.getsize(args.input_file) % PackedSfenValue.itemsize != 0:
+        raise ValueError(f"Input file {args.input_file} is broken (not a multiple of {PackedSfenValue.itemsize}).")
 
     if args.output_file:
         if not args.output_file.endswith(".bin"):

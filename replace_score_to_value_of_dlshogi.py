@@ -16,11 +16,13 @@ def parse_args():
     parser.add_argument("output_file", type=str, help="Output file (.bin)")
     parser.add_argument("--model-path", type=str, default="model.onnx", help="ONNX Model path", dest="model_path")
     parser.add_argument("--score-scaling", type=float, default=600.0, help="Score scaling", dest="score_scaling")
+    parser.add_argument("--chunk-size", type=int, default=10**7, help="Chunk size", dest="chunk_size")
     parser.add_argument("--batch-size", type=int, default=16384, help="Batch size", dest="batch_size")
     parser.add_argument("--device-id", type=int, default=0, help="Device ID to be used", dest="device_id")
     parser.add_argument("--enable-cuda", action="store_true", help="Enable CUDAExecutionProvider", dest="enable_cuda")
     parser.add_argument("--enable-tensorrt", action="store_true", help="Enable TensorrtExecutionProvider", dest="enable_tensorrt")
     parser.add_argument("--resume", action="store_true", help="Resume from the middle of the file", dest="resume")
+
     return parser.parse_args()
 
 def setup_session(model_path, device_id, enable_cuda, enable_tensorrt):
@@ -92,14 +94,13 @@ def main():
 
         processed_positions = offset // PackedSfenValue.itemsize
 
-    block_size = 10_000_000
-
     print("-----------------------------------------")
     print(f"Input file          : {args.input_file}")
     print(f"Number of positions : {total_positions}" + (f" (Resume from {processed_positions})" if args.resume else ""))
     print(f"Output file         : {args.output_file}")
     print(f"Model path          : {args.model_path}")
     print(f"Score scaling       : {args.score_scaling}")
+    print(f"Chunk size          : {args.chunk_size}")
     print(f"Batch size          : {args.batch_size}")
     print(f"Device ID           : {args.device_id}")
     print(f"Enable CUDA         : {args.enable_cuda}")
@@ -121,7 +122,7 @@ def main():
         with open(args.output_file, "ab" if args.resume else "wb") as f_out:
             while processed_positions < total_positions:
                 remaining_positions = total_positions - processed_positions
-                read_size = min(remaining_positions, block_size)
+                read_size = min(remaining_positions, args.chunk_size)
                 psvs = np.fromfile(args.input_file, count=read_size, offset=processed_positions * PackedSfenValue.itemsize, dtype=PackedSfenValue)
 
                 if len(psvs) != read_size:
