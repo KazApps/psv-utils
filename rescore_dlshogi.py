@@ -241,7 +241,10 @@ def main():
                 args.resume,
                 session)
 
-    print(f"The score replacement process is complete. Output file : {args.output_file}")
+    print(f"The score replacement process is complete.")
+
+    if not in_place:
+        print("Output file : {args.output_file}")
 
 if __name__ == "__main__":
     main()
