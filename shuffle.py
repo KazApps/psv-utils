@@ -9,7 +9,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Shuffle data in PSV file.")
     parser.add_argument("input_file", type=str, help="Input file (.bin)")
     parser.add_argument("output_file", type=str,
-                        help="Output file (.bin). If an empty string is given, the input file will be shuffled in-place")
+                        help="Output file (.bin). If left empty, the input file will be shuffled and overwritten.")
     parser.add_argument("--chunk-size", type=int, default=10**7, help="Chunk size", dest="chunk_size")
 
     return parser.parse_args()
