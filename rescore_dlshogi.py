@@ -28,6 +28,7 @@ def parse_args():
 def setup_session(model_path, device_id, enable_cuda, enable_tensorrt):
     available_providers = ort.get_available_providers()
     providers = []
+
     if enable_tensorrt and 'TensorrtExecutionProvider' in available_providers:
         providers.append(('TensorrtExecutionProvider', {
             'device_id': device_id,
@@ -35,11 +36,13 @@ def setup_session(model_path, device_id, enable_cuda, enable_tensorrt):
             'trt_engine_cache_enable': True,
         }))
         print("TensorrtExecutionProvider is enabled.")
+
     if enable_cuda and 'CUDAExecutionProvider' in available_providers:
         providers.append(('CUDAExecutionProvider', {
             'device_id': device_id,
         }))
         print("CUDAExecutionProvider is enabled.")
+
     if 'CPUExecutionProvider' in available_providers:
         providers.append('CPUExecutionProvider')
         print("CPUExecutionProvider is enabled.")
