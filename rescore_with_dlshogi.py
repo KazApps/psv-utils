@@ -47,7 +47,7 @@ def setup_session(model_path, device_id, enable_cuda, enable_tensorrt):
     if 'CPUExecutionProvider' in available_providers:
         providers.append('CPUExecutionProvider')
         print("CPUExecutionProvider is enabled.")
-    
+
     if not providers:
         raise RuntimeError("No available providers found.")
 
@@ -154,7 +154,7 @@ def rescore(input_path, output_path, num_positions, offset, score_scaling, batch
                 remaining_positions = num_positions - processed_positions
                 read_size = min(remaining_positions, chunk_size)
 
-                # Read position chunks from file
+                # Read a chunk from file
                 psvs = np.fromfile(
                     input_path,
                     count=read_size,
@@ -187,18 +187,18 @@ def rescore_inplace(input_path, num_positions, score_scaling, batch_size, chunk_
 
     psvs = np.memmap(input_path, mode="r+", dtype=PackedSfenValue)
 
-    with tqdm(total=num_positions, initial=processed_positions) as bar:
+    with tqdm(total=num_positions) as bar:
         while processed_positions < num_positions:
             remaining_positions = num_positions - processed_positions
             read_size = min(remaining_positions, chunk_size)
 
-            # Read position chunks
+            # Read a chunk
             chunk = psvs[processed_positions:processed_positions+read_size]
 
             if len(chunk) != read_size:
                 raise ValueError(f"Failed to read {read_size} positions from the input file.")
 
-            scores = process_chunk(board, chunk, input_features1, input_features2, score_scaling, batch_size, session, bar)
+            scores = process_chunk(board, chunk.copy(), input_features1, input_features2, score_scaling, batch_size, session, bar)
             chunk["score"] = scores
             psvs.flush()
             processed_positions += read_size
