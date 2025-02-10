@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Shuffle data in psv file.")
+    parser = argparse.ArgumentParser(description="Shuffle data in PSV file.")
     parser.add_argument("input_file", type=str, help="Input file (.bin)")
     parser.add_argument("output_file", type=str,
                         help="Output file (.bin). If an empty string is given, the input file will be shuffled in-place")

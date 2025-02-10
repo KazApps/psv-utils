@@ -7,8 +7,8 @@ import numpy as np
 from tqdm import tqdm
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Concatenate multiple PackedSfenValue files into a single file.")
-    parser.add_argument("files", nargs='+', help="List of PackedSfenValue files or a directory containing them")
+    parser = argparse.ArgumentParser(description="Concatenate multiple PSV files into a single file.")
+    parser.add_argument("files", nargs='+', help="List of PSV files or a directory containing them")
     parser.add_argument("output_file", type=str, help="Output file (.bin)")
     parser.add_argument("--chunk-size", type=int, default=10**7, help="Chunk size", dest="chunk_size")
 
