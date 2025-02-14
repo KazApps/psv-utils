@@ -1,12 +1,14 @@
 ﻿import argparse
 from glob import glob
 import os
+from typing import List, Type
 
 from cshogi import PackedSfenValue
 import numpy as np
 from tqdm import tqdm
 
-def parse_args():
+
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Concatenate multiple PSV files into a single file.")
     parser.add_argument("files", nargs='+', help="List of PSV files or a directory containing them")
     parser.add_argument("output_file", type=str, help="Output file (.bin)")
@@ -14,7 +16,8 @@ def parse_args():
 
     return parser.parse_args()
 
-def concat_files(files, output_path, chunk_size, dtype):
+
+def concat_files(files: List[str], output_path: str, chunk_size: int, dtype: Type) -> None:
     type_size = np.dtype(dtype).itemsize
     total = sum(os.path.getsize(file) for file in files) // type_size
     output_pos = 0
@@ -46,7 +49,8 @@ def concat_files(files, output_path, chunk_size, dtype):
 
     output_mmap.flush()
 
-def verify_files(files, dtype):
+
+def verify_files(files: List[str], dtype: Type) -> List[str]:
     verified_files = []
 
     for file in files:
@@ -63,7 +67,8 @@ def verify_files(files, dtype):
 
     return verified_files
 
-def main():
+
+def main() -> None:
     args = parse_args()
     dtype=PackedSfenValue
 
@@ -80,6 +85,7 @@ def main():
 
     verified_files = verify_files(files_to_concat, PackedSfenValue)
     concat_files(verified_files, args.output_file, chunk_size=args.chunk_size, dtype=dtype)
+
 
 if __name__ == "__main__":
     main()

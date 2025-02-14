@@ -1,11 +1,14 @@
 ﻿import argparse
 import os
+from typing import Type
 
 from cshogi import PackedSfenValue
 import numpy as np
+from numpy.typing import NDArray
 from tqdm import tqdm
 
-def parse_args():
+
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Shuffle data in PSV file.")
     parser.add_argument("input_file", type=str, help="Input file (.bin)")
     parser.add_argument("output_file", type=str,
@@ -14,7 +17,11 @@ def parse_args():
 
     return parser.parse_args()
 
-def shuffle_large_file(input_path, output_path, chunk_size=10**7, dtype=PackedSfenValue):
+
+def shuffle_large_file(input_path: str,
+                       output_path: str,
+                       chunk_size: int=10**7,
+                       dtype: Type=PackedSfenValue) -> None:
     input_mmap = np.memmap(input_path, dtype=dtype, mode='r')
     total = len(input_mmap)
     num_chunks = int(np.ceil(total / chunk_size))
@@ -38,7 +45,10 @@ def shuffle_large_file(input_path, output_path, chunk_size=10**7, dtype=PackedSf
     assert output_pos == total, "Output data size does not match input data size"
     output_mmap.flush()
 
-def shuffle_large_file_inplace(input_path, chunk_size=10**7, dtype=PackedSfenValue):
+
+def shuffle_large_file_inplace(input_path: str,
+                               chunk_size: int=10**7,
+                               dtype: Type=PackedSfenValue) -> None:
     mmap = np.memmap(input_path, dtype=dtype, mode="r+")
     total = len(mmap)
     num_chunks = int(np.ceil(total / chunk_size))
@@ -68,7 +78,8 @@ def shuffle_large_file_inplace(input_path, chunk_size=10**7, dtype=PackedSfenVal
 
     mmap.flush()
 
-def main():
+
+def main() -> None:
     args = parse_args()
 
     if not os.path.exists(args.input_file):
@@ -87,6 +98,7 @@ def main():
         shuffle_large_file(args.input_file, args.output_file, args.chunk_size)
     else:
         shuffle_large_file_inplace(args.input_file, args.chunk_size)
+
 
 if __name__ == "__main__":
     main()
