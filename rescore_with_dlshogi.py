@@ -148,6 +148,7 @@ def process_chunk(board: Board, chunk: NDArray[PackedSfenValue],
 
     return scores
 
+
 def rescore(input_path: str,
             output_path: str,
             num_positions: int,
@@ -193,6 +194,7 @@ def rescore(input_path: str,
                 psvs.tofile(f_out)
                 processed_positions += read_size
 
+
 def rescore_inplace(input_path: str,
                     num_positions: int,
                     score_scaling: float,
@@ -230,6 +232,7 @@ def rescore_inplace(input_path: str,
             processed_positions += read_size
 
     psvs.flush()
+
 
 def main() -> None:
     args = parse_args()
