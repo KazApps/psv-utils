@@ -1,0 +1,4 @@
+﻿cshogi
+numpy
+tqdm
+onnxruntime-gpu
