@@ -1,9 +1,9 @@
 ﻿import argparse
 import os
-from typing import Type
 
 from cshogi import PackedSfenValue
 import numpy as np
+from numpy.typing import DTypeLike
 from tqdm import tqdm
 
 
@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
 def shuffle_large_file(input_path: str,
                        output_path: str,
                        chunk_size: int=10**7,
-                       dtype: Type=PackedSfenValue) -> None:
+                       dtype: DTypeLike=PackedSfenValue) -> None:
     input_mmap = np.memmap(input_path, dtype=dtype, mode='r')
     total = len(input_mmap)
     num_chunks = int(np.ceil(total / chunk_size))
@@ -47,7 +47,7 @@ def shuffle_large_file(input_path: str,
 
 def shuffle_large_file_inplace(input_path: str,
                                chunk_size: int=10**7,
-                               dtype: Type=PackedSfenValue) -> None:
+                               dtype: DTypeLike=PackedSfenValue) -> None:
     mmap = np.memmap(input_path, dtype=dtype, mode="r+")
     total = len(mmap)
     num_chunks = int(np.ceil(total / chunk_size))
