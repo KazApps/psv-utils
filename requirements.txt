@@ -1,4 +1,4 @@
 ﻿cshogi
-numpy
+numpy<2
 tqdm
 onnxruntime-gpu

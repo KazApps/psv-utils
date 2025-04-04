@@ -30,7 +30,7 @@ def shuffle_large_file(input_path: str,
     if os.path.exists(output_path):
         os.remove(output_path)
 
-    output_mmap = np.memmap(output_path, dtype=dtype, mode='w+', shape=input_mmap.shape)
+    output_mmap = np.memmap(output_path, dtype=dtype, mode="w+", shape=input_mmap.shape)
 
     for chunk_idx in tqdm(chunk_order, desc="Shuffling chunks"):
         start = chunk_idx * chunk_size
