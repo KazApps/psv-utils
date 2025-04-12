@@ -83,12 +83,10 @@ def gensfen(output_path: str,
 
     # Buffer
     sfens_buffer = utils.BatchBuffer(buffer_size, batch_size, dtype=PackedSfenValue)
+    startpos_buffer = utils.BatchBuffer(0, batch_size, dtype=PackedSfenValue)
 
     def get_checkpoint_path():
-        save_dir = os.path.abspath(os.path.join(output_path, os.pardir))
-        save_file = os.path.join(save_dir, "checkpoint.pkl")
-
-        return save_file
+        return output_path + ".checkpoint"
 
     if resume:
         checkpoint_path = get_checkpoint_path()
@@ -103,6 +101,7 @@ def gensfen(output_path: str,
             state = pkl.load(f)
 
         sfens_buffer = state["sfens_buffer"]
+        startpos_buffer = state["startpos_buffer"]
         duplicate_checker = state["duplicate_checker"]
 
         os.remove(checkpoint_path)
@@ -182,16 +181,16 @@ def gensfen(output_path: str,
 
             return len(sfens), generated[:pos_count]
 
-        # Reading starting positions
-        if sfen_path:
-            with open(sfen_path, 'r', encoding="utf-8-sig") as f:
-                sfens = [line[5:] for line in f if line.startswith("sfen ")]
-        else:
-            sfens = ["lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"]
-
-        sfens = list(set(sfens))
-
         if not resume:
+            # Reading starting positions
+            if sfen_path:
+                with open(sfen_path, 'r', encoding="utf-8-sig") as f:
+                    sfens = [line[5:] for line in f if line.startswith("sfen ")]
+            else:
+                sfens = ["lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"]
+
+            sfens = list(set(sfens))
+
             # `padding` is used as a startpos flag.
             psfens = np.zeros(len(sfens), dtype=PackedSfenValue)
 
@@ -204,14 +203,19 @@ def gensfen(output_path: str,
                 psfens["gamePly"] = 1
 
             np.random.shuffle(psfens)
-            sfens_buffer.push(psfens)
+            startpos_buffer = utils.BatchBuffer(len(psfens), batch_size, dtype=PackedSfenValue)
+            startpos_buffer.push(psfens)
 
         with open(output_path, "ab" if resume else "wb") as f_out:
             while num_positions:
                 if sfens_buffer.empty():
-                    print("\nThe generation process has stopped because buffer is empty.")
+                    if startpos_buffer.empty():
+                        print("\nThe generation process has stopped because buffer is empty."
+                              "\nPlease consider increasing the starting positions or increasing the buffer size.")
 
-                    return False
+                        return False
+
+                    sfens_buffer.push(startpos_buffer.pop())
 
                 processed, new_sfens = next_sfens(sfens_buffer.pop(), f_out)
                 np.random.shuffle(new_sfens)
@@ -226,12 +230,14 @@ def gensfen(output_path: str,
         with open(checkpoint_path, "wb") as f_out:
             state = {
                 "sfens_buffer": sfens_buffer,
+                "startpos_buffer": startpos_buffer,
                 "duplicate_checker": duplicate_checker
             }
 
             pkl.dump(state, f_out)
 
-        print("Done!")
+        print("Done!\n"
+              "You can resume by adding the --resume option.")
 
         return False
 
