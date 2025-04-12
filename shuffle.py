@@ -12,68 +12,36 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("input_file", type=str, help="Input file (.bin)")
     parser.add_argument("output_file", type=str,
                         help="Output file (.bin). If left empty, the input file will be shuffled and overwritten.")
-    parser.add_argument("--chunk-size", type=int, default=10**7, help="Chunk size", dest="chunk_size")
 
     return parser.parse_args()
 
 
 def shuffle_large_file(input_path: str,
                        output_path: str,
-                       chunk_size: int=10**7,
                        dtype: DTypeLike=PackedSfenValue) -> None:
-    input_mmap = np.memmap(input_path, dtype=dtype, mode='r')
-    total = len(input_mmap)
-    num_chunks = int(np.ceil(total / chunk_size))
-    chunk_order = np.random.permutation(num_chunks)
-    output_pos = 0
+    mmap = np.memmap(input_path, dtype=dtype, mode='r')
+    indices = np.random.permutation(len(mmap))
 
-    if os.path.exists(output_path):
-        os.remove(output_path)
-
-    output_mmap = np.memmap(output_path, dtype=dtype, mode="w+", shape=input_mmap.shape)
-
-    for chunk_idx in tqdm(chunk_order, desc="Shuffling chunks"):
-        start = chunk_idx * chunk_size
-        end = min((chunk_idx + 1) * chunk_size, total)
-        chunk = input_mmap[start:end].copy()
-        np.random.shuffle(chunk)
-        output_end = output_pos + (end - start)
-        output_mmap[output_pos:output_end] = chunk[:]
-        output_pos = output_end
-
-    assert output_pos == total, "Output data size does not match input data size"
-    output_mmap.flush()
+    with open(output_path, 'wb') as f:
+        for i in tqdm(indices):
+            f.write(mmap[i].tobytes())
 
 
 def shuffle_large_file_inplace(input_path: str,
-                               chunk_size: int=10**7,
                                dtype: DTypeLike=PackedSfenValue) -> None:
-    mmap = np.memmap(input_path, dtype=dtype, mode="r+")
-    total = len(mmap)
-    num_chunks = int(np.ceil(total / chunk_size))
-    rng = np.random.default_rng()
+    mmap = np.memmap(input_path, dtype=dtype, mode='r+')
+    indices = np.random.permutation(len(mmap))
 
-    # Shuffling chunk order with Fisher-Yates algorithm
-    for i in tqdm(range(num_chunks - 1 if total % chunk_size == 0 else 2, 0, -1), desc="Shuffling chunk order"):
-        j = rng.integers(0, i + 1)
-        if i == j:
+    for i in tqdm(range(len(indices))):
+        if indices[i] == i:
             continue
 
-        start_i = i * chunk_size
-        end_i = min((i + 1) * chunk_size, total)
-        start_j = j * chunk_size
-        end_j = min((j + 1) * chunk_size, total)
+        temp = mmap[i].copy()
+        mmap[i] = mmap[indices[i]]
+        mmap[indices[i]] = temp
 
-        tmp = mmap[start_i:end_i].copy()
-        mmap[start_i:end_i] = mmap[start_j:end_j]
-        mmap[start_j:end_j] = tmp
-
-    for chunk_idx in tqdm(range(num_chunks), desc="Shuffling within chunks"):
-        start = chunk_idx * chunk_size
-        end = min((chunk_idx + 1) * chunk_size, total)
-        chunk = mmap[start:end].copy()
-        np.random.shuffle(chunk)
-        mmap[start:end] = chunk
+        indices[indices[i]] = indices[i]
+        indices[i] = i
 
     mmap.flush()
 
@@ -94,9 +62,9 @@ def main() -> None:
         if not args.output_file.endswith(".bin"):
             raise ValueError("Output file must be a PackedSfenValue file (.bin).")
 
-        shuffle_large_file(args.input_file, args.output_file, args.chunk_size)
+        shuffle_large_file(args.input_file, args.output_file)
     else:
-        shuffle_large_file_inplace(args.input_file, args.chunk_size)
+        shuffle_large_file_inplace(args.input_file)
 
 
 if __name__ == "__main__":
