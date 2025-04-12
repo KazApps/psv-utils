@@ -83,7 +83,6 @@ def gensfen(output_path: str,
 
     # Buffer
     sfens_buffer = utils.BatchBuffer(buffer_size, batch_size, dtype=PackedSfenValue)
-    startpos_buffer = utils.BatchBuffer(0, batch_size, dtype=PackedSfenValue)
 
     def get_checkpoint_path():
         save_dir = os.path.abspath(os.path.join(output_path, os.pardir))
@@ -104,13 +103,13 @@ def gensfen(output_path: str,
             state = pkl.load(f)
 
         sfens_buffer = state["sfens_buffer"]
-        startpos_buffer = state["startpos_buffer"]
         duplicate_checker = state["duplicate_checker"]
 
+        os.remove(checkpoint_path)
         print("Done!")
 
     try:
-        def next_sfens(sfens, f_out, is_startpos):
+        def next_sfens(sfens, f_out):
             if len(sfens) == 0:
                 return 0, np.empty(0, dtype=PackedSfenValue)
 
@@ -120,13 +119,11 @@ def gensfen(output_path: str,
 
             batch_values, batch_logits = utils.inference(input_features1[:len(sfens)], input_features2[:len(sfens)], session)
             scores = utils.convert_to_score(batch_values, score_scaling)
+            prev_scores = -(sfens["score"])
 
             # Filter by score and ply
-            indices = (np.abs(scores) < score_limit) & (sfens["gamePly"] <= max_moves)
-
-            if not is_startpos:
-                prev_scores = -(sfens["score"])
-                indices &= scores >= (prev_scores - score_diff)
+            indices = ((np.abs(scores) < score_limit) & (sfens["gamePly"] <= max_moves) &
+                      ((sfens["padding"] == 0) | (scores >= (prev_scores - score_diff))))
 
             sfens = sfens[indices]
             scores = scores[indices]
@@ -138,7 +135,6 @@ def gensfen(output_path: str,
                 batch_logits = batch_logits[:num_positions]
 
             sfens["score"] = scores
-
             pos_count = 0
 
             for i, logits in enumerate(batch_logits):
@@ -174,6 +170,7 @@ def gensfen(output_path: str,
                         board.to_psfen(generated[pos_count:])
                         generated["score"][pos_count] = sfens["score"][i]
                         generated["gamePly"][pos_count] = sfens["gamePly"][i] + 1
+                        generated["padding"][pos_count] = 1
                         pos_count += 1
 
                     board.pop()
@@ -193,37 +190,30 @@ def gensfen(output_path: str,
             sfens = ["lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"]
 
         sfens = list(set(sfens))
-        psfens = np.empty(len(sfens), dtype=PackedSfenValue)
 
-        for i, sfen in enumerate(sfens):
-            board.set_sfen(sfen)
-            board.to_psfen(psfens[i:])
-            psfens["gamePly"][i] = sfen.split()[4] if len(sfen.split()) > 4 else 1
+        if not resume:
+            # `padding` is used as a startpos flag.
+            psfens = np.zeros(len(sfens), dtype=PackedSfenValue)
 
-        if ignore_ply:
-            psfens["gamePly"] = 1
+            for i, sfen in enumerate(sfens):
+                board.set_sfen(sfen)
+                board.to_psfen(psfens[i:])
+                psfens["gamePly"][i] = sfen.split()[4] if len(sfen.split()) > 4 else 1
 
-        np.random.shuffle(psfens)
+            if ignore_ply:
+                psfens["gamePly"] = 1
 
-        startpos_buffer = utils.BatchBuffer(len(psfens), batch_size, dtype=PackedSfenValue)
-        startpos_buffer.push(psfens)
+            np.random.shuffle(psfens)
+            sfens_buffer.push(psfens)
 
         with open(output_path, "ab" if resume else "wb") as f_out:
             while num_positions:
                 if sfens_buffer.empty():
-                    print("Sfens buffer is empty")
-                    processed, new_sfens = next_sfens(startpos_buffer.pop(), f_out, True)
-                    sfens_buffer.push(new_sfens)
-                    bar.update(processed)
-                    num_positions -= processed
+                    print("\nThe generation process has stopped because buffer is empty.")
 
-                    if sfens_buffer.empty():
-                        print("\nThe generation process has stopped because buffer is empty."
-                              "\nPlease consider increasing the starting positions or increasing the buffer size.")
+                    return False
 
-                        return False
-
-                processed, new_sfens = next_sfens(sfens_buffer.pop(), f_out, False)
+                processed, new_sfens = next_sfens(sfens_buffer.pop(), f_out)
                 np.random.shuffle(new_sfens)
                 sfens_buffer.push(new_sfens)
                 bar.update(processed)
@@ -236,7 +226,6 @@ def gensfen(output_path: str,
         with open(checkpoint_path, "wb") as f_out:
             state = {
                 "sfens_buffer": sfens_buffer,
-                "startpos_buffer": startpos_buffer,
                 "duplicate_checker": duplicate_checker
             }
 
