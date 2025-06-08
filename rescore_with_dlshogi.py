@@ -21,6 +21,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("output_file", type=str,
                         help="Output file (.bin). If left empty, the input file will be rescored and overwritten.")
     parser.add_argument("--score-scaling", type=float, default=600.0, help="Score scaling", dest="score_scaling")
+    parser.add_argument("--blend-ratio", type=float, default=1.0,
+                        help="Weight of the new score when blending with the original."
+                        "1.0 = use only the new score.", dest="blend_ratio")
     parser.add_argument("--batch-size", type=int, default=16384, help="Batch size", dest="batch_size")
     parser.add_argument("--chunk-size", type=int, default=10**7, help="Chunk size", dest="chunk_size")
     parser.add_argument("--resume", action="store_true", help="Resume from the middle of the file", dest="resume")
@@ -104,6 +107,7 @@ def rescore(input_path: str,
             num_positions: int,
             offset: int,
             score_scaling: float,
+            blend_ratio: float,
             batch_size: int,
             chunk_size: int,
             resume: bool,
@@ -136,7 +140,7 @@ def rescore(input_path: str,
                     raise ValueError(f"Failed to read {read_size} positions from the input file.")
 
                 scores = process_chunk(board, psvs, input_features1, input_features2, score_scaling, batch_size, session, bar)
-                psvs["score"] = scores
+                psvs["score"] = scores * blend_ratio + psvs["score"] * (1 - blend_ratio)
 
                 # Append to output file
                 psvs.tofile(f_out)
@@ -146,6 +150,7 @@ def rescore(input_path: str,
 def rescore_inplace(input_path: str,
                     num_positions: int,
                     score_scaling: float,
+                    blend_ratio: float,
                     batch_size: int,
                     chunk_size: int,
                     session: ort.InferenceSession) -> None:
@@ -173,7 +178,7 @@ def rescore_inplace(input_path: str,
                 raise ValueError(f"Failed to read {read_size} positions from the input file.")
 
             scores = process_chunk(board, chunk.copy(), input_features1, input_features2, score_scaling, batch_size, session, bar)
-            chunk["score"] = scores
+            chunk["score"] = scores * blend_ratio + chunk["score"] * (1 - blend_ratio)
             psvs.flush()
             processed_positions += read_size
 
@@ -190,6 +195,7 @@ def main() -> None:
     print(f"Output file         : {args.input_file + ' (in-place)' if in_place else args.output_file}")
     print(f"Model path          : {args.model_path}")
     print(f"Score scaling       : {args.score_scaling}")
+    print(f"Blend ratio         : {args.blend_ratio}")
     print(f"Batch size          : {args.batch_size}")
     print(f"Chunk size          : {args.chunk_size}")
     print(f"Device ID           : {args.device_id}")
@@ -205,6 +211,7 @@ def main() -> None:
         rescore_inplace(args.input_file,
                         total_positions,
                         args.score_scaling,
+                        args.blend_ratio,
                         args.batch_size,
                         args.chunk_size,
                         session)
@@ -214,6 +221,7 @@ def main() -> None:
                 total_positions,
                 processed_positions,
                 args.score_scaling,
+                args.blend_ratio,
                 args.batch_size,
                 args.chunk_size,
                 args.resume,
