@@ -192,7 +192,7 @@ class BatchBuffer:
         return self.start == self.end
 
 
-class DuplicatorChecker:
+class DuplicateChecker:
     def __init__(self, capacity=2 ** 34):
         self.filter = np.zeros(capacity // 64, dtype=np.uint64)
         self.capacity = capacity

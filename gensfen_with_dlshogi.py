@@ -79,7 +79,7 @@ def gensfen(output_path: str,
     input_features1, input_features2 = utils.allocate_input_features(batch_size)
     generated = np.empty(batch_size * policy_moves, dtype=PackedSfenValue)
     in_checks, is_captures = np.empty(batch_size, dtype=bool), np.empty(batch_size, dtype=bool)
-    duplicate_checker = utils.DuplicatorChecker()
+    duplicate_checker = utils.DuplicateChecker()
 
     # Buffer
     sfens_buffer = utils.BatchBuffer(buffer_size, batch_size, dtype=PackedSfenValue)
